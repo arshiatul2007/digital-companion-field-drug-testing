@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Digital Companion for Field Drug Testing</title>
+
+    <link rel="stylesheet" href="/frontend/style.css">
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>Digital Companion</h1>
+
+        <p class="subtitle">
+            Field Drug Testing Record System
+        </p>
+
+        <div class="warning">
+            ⚠️ Demo prototype only — colour classification is not a
+            validated drug-identification method.
+        </div>
+
+        <section class="card">
+
+            <h2>New Field Test</h2>
+
+            <label>Operator ID</label>
+
+            <input
+                type="text"
+                id="operatorId"
+                placeholder="Enter Operator ID"
+            >
+
+            <h3>Capture / Select Test Image</h3>
+
+            <video id="camera" autoplay playsinline></video>
+
+            <div class="buttons">
+
+                <button id="startCamera">
+                    Start Camera
+                </button>
+
+                <button id="capture">
+                    Capture Image
+                </button>
+
+            </div>
+
+            <input
+                type="file"
+                id="imageInput"
+                accept="image/*"
+            >
+
+            <canvas id="canvas"></canvas>
+
+            <h3>Location</h3>
+
+            <button id="getLocation">
+                Get GPS Location
+            </button>
+
+            <p id="locationStatus">
+                Location not captured
+            </p>
+
+            <button id="submitTest">
+                Create Test Record
+            </button>
+
+            <div id="result"></div>
+
+        </section>
+
+
+        <section class="card">
+
+            <h2>Test Log</h2>
+
+            <input
+                type="text"
+                id="search"
+                placeholder="Search by Operator ID, Result or Test ID"
+            >
+
+            <button id="searchButton">
+                Search
+            </button>
+
+            <div id="testLog"></div>
+
+        </section>
+
+
+        <section class="card">
+
+            <h2>Verify Test Record</h2>
+
+            <input
+                type="text"
+                id="verifyId"
+                placeholder="Enter Test ID"
+            >
+
+            <button id="verifyButton">
+                Verify Record
+            </button>
+
+            <div id="verification"></div>
+
+        </section>
+
+    </div>
+
+    <script src="/frontend/app.js"></script>
+
+</body>
+</html>
