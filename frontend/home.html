@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Digital Companion | Field Drug Testing</title>
+
+    <link rel="stylesheet" href="/static/style.css">
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f5f8fc;
+            color: #172033;
+        }
+
+        .hero {
+            min-height: 85vh;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 50px 8%;
+            background: linear-gradient(135deg, #eaf4ff, #f8fbff);
+            gap: 50px;
+        }
+
+        .hero-text {
+            max-width: 600px;
+        }
+
+        .tag {
+            display: inline-block;
+            background: #dceeff;
+            color: #1769aa;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .hero h1 {
+            font-size: 48px;
+            line-height: 1.1;
+            margin: 10px 0;
+        }
+
+        .hero h1 span {
+            color: #1677c8;
+        }
+
+        .hero p {
+            font-size: 18px;
+            line-height: 1.7;
+            color: #536174;
+        }
+
+        .start-btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 15px 28px;
+            background: #1677c8;
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 17px;
+        }
+
+        .start-btn:hover {
+            background: #0d5fa5;
+        }
+
+        /* Hero illustration */
+        .hero-image {
+            width: 420px;
+            height: 360px;
+            background: white;
+            border-radius: 25px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .phone {
+            width: 180px;
+            height: 300px;
+            background: #172033;
+            border-radius: 25px;
+            padding: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+        }
+
+        .phone-screen {
+            height: 100%;
+            background: linear-gradient(180deg, #edf7ff, white);
+            border-radius: 18px;
+            text-align: center;
+            padding-top: 25px;
+            box-sizing: border-box;
+        }
+
+        .camera-icon {
+            font-size: 55px;
+            margin-top: 35px;
+        }
+
+        .test-card {
+            background: white;
+            width: 90px;
+            margin: 20px auto;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+        }
+
+        .test-line {
+            height: 10px;
+            margin: 6px;
+            border-radius: 5px;
+            background: #55aee8;
+        }
+
+        /* Sections */
+        section {
+            padding: 70px 8%;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 32px;
+            margin-bottom: 15px;
+        }
+
+        .section-subtitle {
+            text-align: center;
+            color: #667085;
+            max-width: 700px;
+            margin: 0 auto 45px;
+            line-height: 1.6;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 18px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.07);
+            text-align: center;
+        }
+
+        .card-icon {
+            font-size: 45px;
+            margin-bottom: 15px;
+        }
+
+        .card h3 {
+            margin-bottom: 10px;
+        }
+
+        .card p {
+            color: #667085;
+            line-height: 1.6;
+        }
+
+        /* How it works */
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        .step {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 18px rgba(0,0,0,0.06);
+        }
+
+        .number {
+            width: 45px;
+            height: 45px;
+            line-height: 45px;
+            border-radius: 50%;
+            background: #1677c8;
+            color: white;
+            margin: auto;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        /* About */
+        .about {
+            background: #eaf4ff;
+        }
+
+        .about-box {
+            max-width: 900px;
+            margin: auto;
+            background: white;
+            padding: 35px;
+            border-radius: 20px;
+            line-height: 1.8;
+        }
+
+        /* Warning */
+        .warning {
+            background: #fff8e6;
+            border-left: 5px solid #e4a11b;
+            padding: 25px;
+            border-radius: 10px;
+            max-width: 900px;
+            margin: auto;
+        }
+
+        footer {
+            background: #172033;
+            color: white;
+            text-align: center;
+            padding: 30px;
+        }
+
+        /* Mobile */
+        @media (max-width: 850px) {
+            .hero {
+                flex-direction: column;
+                text-align: center;
+                padding: 40px 6%;
+            }
+
+            .hero h1 {
+                font-size: 36px;
+            }
+
+            .hero-image {
+                width: 320px;
+                height: 330px;
+            }
+
+            .cards,
+            .steps {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- HERO -->
+<div class="hero">
+
+    <div class="hero-text">
+
+        <div class="tag">
+            🧪 Digital Field Testing
+        </div>
+
+        <h1>
+            Digital Companion for
+            <span>Field Drug Testing</span>
+        </h1>
+
+        <p>
+            A mobile-friendly digital system designed to help document
+            colorimetric field-test results using image capture,
+            location information, timestamps and tamper-evident records.
+        </p>
+
+        <a href="/test" class="start-btn">
+            Start Testing →
+        </a>
+
+    </div>
+
+
+    <!-- Simple visual illustration -->
+    <div class="hero-image">
+
+        <div class="phone">
+
+            <div class="phone-screen">
+
+                <h3>Test Capture</h3>
+
+                <div class="camera-icon">
+                    📷
+                </div>
+
+                <div class="test-card">
+
+                    <div class="test-line"></div>
+                    <div class="test-line"></div>
+                    <div class="test-line"></div>
+
+                </div>
+
+                <small>
+                    Reference Card
+                </small>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ABOUT -->
+<section class="about">
+
+    <h2 class="section-title">
+        What is Digital Companion?
+    </h2>
+
+    <p class="section-subtitle">
+        The system helps convert a visual field-test process into a
+        structured digital workflow.
+    </p>
+
+    <div class="about-box">
+
+        <p>
+            Traditional colorimetric field-test kits rely on visual
+            interpretation of a colour-change reaction. This can make
+            results subjective and may leave limited digital evidence
+            about when and where a test was conducted.
+        </p>
+
+        <p>
+            Digital Companion works alongside existing field-test kits.
+            A device camera captures the test image together with a
+            reference colour card. The application then processes the
+            image and creates a digital record containing test
+            information, timestamp, location and cryptographic hashes.
+        </p>
+
+    </div>
+
+</section>
+
+
+<!-- FEATURES -->
+<section>
+
+    <h2 class="section-title">
+        Key Features
+    </h2>
+
+    <p class="section-subtitle">
+        Everything needed to demonstrate a digital field-testing
+        workflow in one application.
+    </p>
+
+
+    <div class="cards">
+
+        <div class="card">
+
+            <div class="card-icon">📷</div>
+
+            <h3>Image Capture</h3>
+
+            <p>
+                Capture the field-test result directly through
+                the device camera.
+            </p>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-icon">🎨</div>
+
+            <h3>Colour Analysis</h3>
+
+            <p>
+                Process the captured image to demonstrate
+                automated result classification.
+            </p>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-icon">📍</div>
+
+            <h3>GPS Location</h3>
+
+            <p>
+                Record the geographical location associated
+                with the test.
+            </p>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-icon">🔐</div>
+
+            <h3>Tamper-Evident Records</h3>
+
+            <p>
+                Generate cryptographic hashes and signatures
+                for the digital record.
+            </p>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-icon">🕒</div>
+
+            <h3>Timestamp</h3>
+
+            <p>
+                Automatically record when the field test
+                was documented.
+            </p>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-icon">📋</div>
+
+            <h3>Searchable Test Log</h3>
+
+            <p>
+                Store and search previously created
+                digital test records.
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- HOW IT WORKS -->
+<section>
+
+    <h2 class="section-title">
+        How It Works
+    </h2>
+
+    <p class="section-subtitle">
+        A simple four-step digital workflow.
+    </p>
+
+
+    <div class="steps">
+
+        <div class="step">
+
+            <div class="number">1</div>
+
+            <h3>Capture</h3>
+
+            <p>
+                Capture the test result and reference
+                colour card.
+            </p>
+
+        </div>
+
+
+        <div class="step">
+
+            <div class="number">2</div>
+
+            <h3>Analyse</h3>
+
+            <p>
+                The system processes the captured image
+                and generates a demonstration result.
+            </p>
+
+        </div>
+
+
+        <div class="step">
+
+            <div class="number">3</div>
+
+            <h3>Record</h3>
+
+            <p>
+                Timestamp, operator information and
+                location are stored.
+            </p>
+
+        </div>
+
+
+        <div class="step">
+
+            <div class="number">4</div>
+
+            <h3>Verify</h3>
+
+            <p>
+                Cryptographic hashes and signatures
+                help detect record changes.
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- IMPORTANT NOTE -->
+<section>
+
+    <h2 class="section-title">
+        Important Note
+    </h2>
+
+    <div class="warning">
+
+        <strong>⚠️ Prototype / Presumptive Result</strong>
+
+        <p>
+            This prototype demonstrates the digital workflow and
+            image-processing concept. The demonstration colour
+            classifier is not a validated method for identifying
+            drugs and must not replace laboratory confirmatory testing.
+        </p>
+
+        <p>
+            A production system would require validated interpretation
+            criteria for the specific commercial field-test kit,
+            colour calibration, quality checks and appropriate
+            security controls.
+        </p>
+
+    </div>
+
+</section>
+
+
+<!-- FINAL CTA -->
+<section style="text-align:center;">
+
+    <h2>
+        Ready to document a field test?
+    </h2>
+
+    <p>
+        Open the testing interface and create a digital record.
+    </p>
+
+    <a href="/test" class="start-btn">
+        Start Testing →
+    </a>
+
+</section>
+
+
+<footer>
+
+    <p>
+        Digital Companion for Field Drug Testing
+    </p>
+
+    <small>
+        Prototype for demonstration and research purposes
+    </small>
+
+</footer>
+
+</body>
+</html>

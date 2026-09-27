@@ -1,27 +1,26 @@
 from flask import Flask, request, jsonify, send_from_directory
-from PIL import Image, ImageStat
 from pathlib import Path
-from datetime import datetime, timezone
+from PIL import Image, ImageStat
 import sqlite3
 import hashlib
 import hmac
 import json
-import uuid
 import os
+from datetime import datetime, timezone
 
 
-# --------------------------------------------------
+# =========================================================
 # FLASK SETUP
-# --------------------------------------------------
-
-app = Flask(__name__)
+# =========================================================
 
 BASE_DIR = Path(__file__).resolve().parent
 
-UPLOAD_FOLDER = BASE_DIR / "uploads"
-DATABASE = BASE_DIR / "tests.db"
+app = Flask(__name__)
 
+UPLOAD_FOLDER = BASE_DIR / "uploads"
 UPLOAD_FOLDER.mkdir(exist_ok=True)
+
+DATABASE = BASE_DIR / "tests.db"
 
 SECRET_KEY = os.environ.get(
     "RECORD_SECRET",
@@ -29,17 +28,23 @@ SECRET_KEY = os.environ.get(
 )
 
 
-# --------------------------------------------------
+# =========================================================
 # DATABASE
-# --------------------------------------------------
+# =========================================================
+
+def get_db():
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    return conn
+
 
 def create_database():
 
-    conn = sqlite3.connect(DATABASE)
+    conn = get_db()
 
     conn.execute("""
         CREATE TABLE IF NOT EXISTS tests (
-            id TEXT PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             timestamp TEXT NOT NULL,
             operator_id TEXT NOT NULL,
             latitude REAL,
@@ -57,208 +62,283 @@ def create_database():
     conn.close()
 
 
-# --------------------------------------------------
+# =========================================================
 # IMAGE HASH
-# --------------------------------------------------
+# =========================================================
 
-def sha256_file(path):
+def sha256_file(file_path):
 
-    h = hashlib.sha256()
+    sha256 = hashlib.sha256()
 
-    with open(path, "rb") as f:
+    with open(file_path, "rb") as f:
 
         while True:
 
-            chunk = f.read(8192)
+            data = f.read(8192)
 
-            if not chunk:
+            if not data:
                 break
 
-            h.update(chunk)
+            sha256.update(data)
 
-    return h.hexdigest()
-
-
-# --------------------------------------------------
-# DEMO COLOUR CLASSIFICATION
-# --------------------------------------------------
-
-def classify_image(path):
-
-    image = Image.open(path).convert("RGB")
-
-    width, height = image.size
-
-    left = int(width * 0.25)
-    top = int(height * 0.25)
-    right = int(width * 0.75)
-    bottom = int(height * 0.75)
-
-    center = image.crop(
-        (left, top, right, bottom)
-    )
-
-    mean_r, mean_g, mean_b = ImageStat.Stat(center).mean
-
-    if mean_r > mean_g * 1.25 and mean_r > mean_b * 1.25:
-
-        return "POSITIVE", 0.85
-
-    elif mean_b > mean_r * 1.20 and mean_b > mean_g * 1.10:
-
-        return "NEGATIVE", 0.85
-
-    else:
-
-        return "INCONCLUSIVE", 0.40
+    return sha256.hexdigest()
 
 
-# --------------------------------------------------
+# =========================================================
+# DEMO IMAGE CLASSIFICATION
+# =========================================================
+
+def classify_image(file_path):
+
+    try:
+
+        image = Image.open(file_path).convert("RGB")
+
+        width, height = image.size
+
+        # Take the central part of the image
+        left = int(width * 0.25)
+        top = int(height * 0.25)
+        right = int(width * 0.75)
+        bottom = int(height * 0.75)
+
+        cropped = image.crop(
+            (left, top, right, bottom)
+        )
+
+        stat = ImageStat.Stat(cropped)
+
+        red = stat.mean[0]
+        green = stat.mean[1]
+        blue = stat.mean[2]
+
+        # -------------------------------------------------
+        # DEMONSTRATION CLASSIFIER
+        # -------------------------------------------------
+
+        if (
+            red > green * 1.25
+            and red > blue * 1.25
+        ):
+
+            return "POSITIVE", 0.85
+
+        elif (
+            blue > red * 1.20
+            and blue > green * 1.10
+        ):
+
+            return "NEGATIVE", 0.85
+
+        else:
+
+            return "INCONCLUSIVE", 0.40
+
+    except Exception:
+
+        return "INCONCLUSIVE", 0.0
+
+
+# =========================================================
 # DIGITAL SIGNATURE
-# --------------------------------------------------
+# =========================================================
 
 def create_signature(record):
 
-    data = json.dumps(
+    canonical = json.dumps(
         record,
-        sort_keys=True
-    ).encode("utf-8")
+        sort_keys=True,
+        separators=(",", ":")
+    )
 
-    return hmac.new(
+    signature = hmac.new(
         SECRET_KEY.encode("utf-8"),
-        data,
+        canonical.encode("utf-8"),
         hashlib.sha256
     ).hexdigest()
 
+    return signature
 
-# --------------------------------------------------
+
+# =========================================================
 # CREATE TEST RECORD
-# --------------------------------------------------
+# =========================================================
 
 @app.route("/api/tests", methods=["POST"])
 def create_test():
 
-    image = request.files.get("image")
+    # -----------------------------------------------------
+    # Check image
+    # -----------------------------------------------------
+
+    if "image" not in request.files:
+
+        return jsonify({
+            "error": "Image is required."
+        }), 400
+
+    image = request.files["image"]
+
+    if image.filename == "":
+
+        return jsonify({
+            "error": "No image selected."
+        }), 400
+
+
+    # -----------------------------------------------------
+    # Operator ID
+    # -----------------------------------------------------
 
     operator_id = request.form.get(
         "operator_id",
         ""
     ).strip()
 
-    if not image:
-
-        return jsonify({
-            "error": "Please provide an image"
-        }), 400
-
     if not operator_id:
 
         return jsonify({
-            "error": "Operator ID is required"
+            "error": "Operator ID is required."
         }), 400
 
-    # Create unique test ID
 
-    test_id = str(uuid.uuid4())
-
-    # Save image
-
-    filename = test_id + ".jpg"
-
-    image_path = UPLOAD_FOLDER / filename
-
-    image.save(image_path)
-
-    # Create image hash
-
-    image_hash = sha256_file(image_path)
-
-    # Demo classification
-
-    result, confidence = classify_image(
-        image_path
-    )
-
-    # Get GPS information
+    # -----------------------------------------------------
+    # GPS
+    # -----------------------------------------------------
 
     latitude = request.form.get("latitude")
-
     longitude = request.form.get("longitude")
+    gps_accuracy = request.form.get("gps_accuracy")
 
-    gps_accuracy = request.form.get(
-        "gps_accuracy"
-    )
 
-    latitude = (
-        float(latitude)
-        if latitude
-        else None
-    )
+    try:
 
-    longitude = (
-        float(longitude)
-        if longitude
-        else None
-    )
+        latitude = (
+            float(latitude)
+            if latitude
+            else None
+        )
 
-    gps_accuracy = (
-        float(gps_accuracy)
-        if gps_accuracy
-        else None
-    )
+        longitude = (
+            float(longitude)
+            if longitude
+            else None
+        )
 
-    # Current UTC time
+        gps_accuracy = (
+            float(gps_accuracy)
+            if gps_accuracy
+            else None
+        )
+
+    except ValueError:
+
+        return jsonify({
+            "error": "Invalid GPS information."
+        }), 400
+
+
+    # -----------------------------------------------------
+    # Save image
+    # -----------------------------------------------------
 
     timestamp = datetime.now(
         timezone.utc
     ).isoformat()
 
-    # Record information
+    filename = (
+        timestamp.replace(":", "-")
+        .replace("+00:00", "")
+        + ".jpg"
+    )
+
+    image_path = UPLOAD_FOLDER / filename
+
+    try:
+
+        # Open and save as JPEG
+        img = Image.open(image)
+        img = img.convert("RGB")
+
+        img.save(
+            image_path,
+            "JPEG"
+        )
+
+    except Exception:
+
+        return jsonify({
+            "error": "Invalid image file."
+        }), 400
+
+
+    # -----------------------------------------------------
+    # Image hash
+    # -----------------------------------------------------
+
+    image_hash = sha256_file(
+        image_path
+    )
+
+
+    # -----------------------------------------------------
+    # Classification
+    # -----------------------------------------------------
+
+    result, confidence = classify_image(
+        image_path
+    )
+
+
+    # -----------------------------------------------------
+    # Create record
+    # -----------------------------------------------------
 
     record = {
-
-        "id": test_id,
-
         "timestamp": timestamp,
-
         "operator_id": operator_id,
-
         "latitude": latitude,
-
         "longitude": longitude,
-
         "gps_accuracy": gps_accuracy,
-
         "result": result,
-
         "image_hash": image_hash
     }
 
+
+    # -----------------------------------------------------
     # Record hash
+    # -----------------------------------------------------
 
-    record_hash = hashlib.sha256(
-
-        json.dumps(
-            record,
-            sort_keys=True
-        ).encode("utf-8")
-
-    ).hexdigest()
-
-    # Digital signature
-
-    signature = create_signature(
-        record
+    canonical_record = json.dumps(
+        record,
+        sort_keys=True,
+        separators=(",", ":")
     )
 
+    record_hash = hashlib.sha256(
+        canonical_record.encode("utf-8")
+    ).hexdigest()
+
+
+    # -----------------------------------------------------
+    # Digital signature
+    # -----------------------------------------------------
+
+    signature = create_signature({
+        **record,
+        "record_hash": record_hash
+    })
+
+
+    # -----------------------------------------------------
     # Save to database
+    # -----------------------------------------------------
 
-    conn = sqlite3.connect(DATABASE)
+    conn = get_db()
 
-    conn.execute("""
-        INSERT INTO tests
-        (
-            id,
+    cursor = conn.execute(
+        """
+        INSERT INTO tests (
             timestamp,
             operator_id,
             latitude,
@@ -270,37 +350,31 @@ def create_test():
             signature,
             image_file
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            timestamp,
+            operator_id,
+            latitude,
+            longitude,
+            gps_accuracy,
+            result,
+            image_hash,
+            record_hash,
+            signature,
+            filename
+        )
+    )
 
-        test_id,
-
-        timestamp,
-
-        operator_id,
-
-        latitude,
-
-        longitude,
-
-        gps_accuracy,
-
-        result,
-
-        image_hash,
-
-        record_hash,
-
-        signature,
-
-        filename
-    ))
+    test_id = cursor.lastrowid
 
     conn.commit()
-
     conn.close()
 
-    # Send result to browser
+
+    # -----------------------------------------------------
+    # Return result
+    # -----------------------------------------------------
 
     return jsonify({
 
@@ -325,121 +399,134 @@ def create_test():
         "record_hash": record_hash,
 
         "signature": signature
+
     })
 
 
-# --------------------------------------------------
+# =========================================================
 # VERIFY TEST RECORD
-# --------------------------------------------------
+# =========================================================
 
 @app.route(
-    "/api/tests/<test_id>/verify",
+    "/api/tests/<int:test_id>/verify",
     methods=["GET"]
 )
 def verify_test(test_id):
 
-    conn = sqlite3.connect(DATABASE)
+    conn = get_db()
 
-    conn.row_factory = sqlite3.Row
-
-    row = conn.execute(
-
-        "SELECT * FROM tests WHERE id = ?",
-
+    test = conn.execute(
+        """
+        SELECT *
+        FROM tests
+        WHERE id = ?
+        """,
         (test_id,)
-
     ).fetchone()
 
     conn.close()
 
-    if not row:
+
+    if test is None:
 
         return jsonify({
-            "error": "Test record not found"
+            "error": "Test record not found."
         }), 404
+
+
+    # -----------------------------------------------------
+    # Check image hash
+    # -----------------------------------------------------
 
     image_path = (
         UPLOAD_FOLDER /
-        row["image_file"]
+        test["image_file"]
     )
 
-    if not image_path.exists():
+    image_hash_valid = False
 
-        return jsonify({
-            "error": "Test image is missing"
-        }), 404
+    if image_path.exists():
 
-    # Check image hash
+        current_image_hash = sha256_file(
+            image_path
+        )
 
-    current_image_hash = sha256_file(
-        image_path
-    )
+        image_hash_valid = (
+            current_image_hash
+            == test["image_hash"]
+        )
 
-    image_hash_valid = (
-        current_image_hash ==
-        row["image_hash"]
-    )
 
-    # Recreate original record
+    # -----------------------------------------------------
+    # Recreate record
+    # -----------------------------------------------------
 
     record = {
 
-        "id": row["id"],
+        "timestamp": test["timestamp"],
 
-        "timestamp": row["timestamp"],
+        "operator_id": test["operator_id"],
 
-        "operator_id": row["operator_id"],
+        "latitude": test["latitude"],
 
-        "latitude": row["latitude"],
+        "longitude": test["longitude"],
 
-        "longitude": row["longitude"],
+        "gps_accuracy": test["gps_accuracy"],
 
-        "gps_accuracy": row["gps_accuracy"],
+        "result": test["result"],
 
-        "result": row["result"],
+        "image_hash": test["image_hash"]
 
-        "image_hash": row["image_hash"]
     }
 
-    # Check record hash
+
+    canonical_record = json.dumps(
+        record,
+        sort_keys=True,
+        separators=(",", ":")
+    )
 
     current_record_hash = hashlib.sha256(
-
-        json.dumps(
-            record,
-            sort_keys=True
-        ).encode("utf-8")
-
+        canonical_record.encode("utf-8")
     ).hexdigest()
 
+
     record_hash_valid = (
-        current_record_hash ==
-        row["record_hash"]
+        current_record_hash
+        == test["record_hash"]
     )
 
-    # Check digital signature
 
-    current_signature = create_signature(
-        record
-    )
+    # -----------------------------------------------------
+    # Verify signature
+    # -----------------------------------------------------
+
+    expected_signature = create_signature({
+
+        **record,
+
+        "record_hash":
+            test["record_hash"]
+
+    })
+
 
     signature_valid = hmac.compare_digest(
-
-        current_signature,
-
-        row["signature"]
+        expected_signature,
+        test["signature"]
     )
 
-    verified = (
 
+    verified = (
         image_hash_valid
         and record_hash_valid
         and signature_valid
     )
 
+
     return jsonify({
 
-        "id": test_id,
+        "verified": verified,
 
         "image_hash_valid":
             image_hash_valid,
@@ -448,16 +535,14 @@ def verify_test(test_id):
             record_hash_valid,
 
         "signature_valid":
-            signature_valid,
+            signature_valid
 
-        "verified":
-            verified
     })
 
 
-# --------------------------------------------------
+# =========================================================
 # GET TEST LOG
-# --------------------------------------------------
+# =========================================================
 
 @app.route(
     "/api/tests",
@@ -470,45 +555,44 @@ def get_tests():
         ""
     ).strip()
 
-    conn = sqlite3.connect(DATABASE)
 
-    conn.row_factory = sqlite3.Row
+    conn = get_db()
+
 
     if search:
 
-        rows = conn.execute("""
+        like = f"%{search}%"
 
+        rows = conn.execute(
+            """
             SELECT *
             FROM tests
-
-            WHERE operator_id LIKE ?
-               OR result LIKE ?
-               OR id LIKE ?
-
-            ORDER BY timestamp DESC
-
-        """, (
-
-            f"%{search}%",
-
-            f"%{search}%",
-
-            f"%{search}%"
-
-        )).fetchall()
+            WHERE
+                operator_id LIKE ?
+                OR result LIKE ?
+                OR CAST(id AS TEXT) LIKE ?
+            ORDER BY id DESC
+            """,
+            (
+                like,
+                like,
+                like
+            )
+        ).fetchall()
 
     else:
 
-        rows = conn.execute("""
-
+        rows = conn.execute(
+            """
             SELECT *
             FROM tests
+            ORDER BY id DESC
+            """
+        ).fetchall()
 
-            ORDER BY timestamp DESC
-
-        """).fetchall()
 
     conn.close()
+
 
     tests = []
 
@@ -516,8 +600,7 @@ def get_tests():
 
         tests.append({
 
-            "id":
-                row["id"],
+            "id": row["id"],
 
             "timestamp":
                 row["timestamp"],
@@ -548,25 +631,42 @@ def get_tests():
 
             "image_file":
                 row["image_file"]
+
         })
+
 
     return jsonify(tests)
 
 
-# --------------------------------------------------
-# FRONTEND
-# --------------------------------------------------
+# =========================================================
+# HOME PAGE
+# =========================================================
 
 @app.route("/")
 def home():
 
     return send_from_directory(
+        str(BASE_DIR / "frontend"),
+        "home.html"
+    )
 
-        BASE_DIR / "frontend",
 
+# =========================================================
+# TESTING PAGE
+# =========================================================
+
+@app.route("/test")
+def test_page():
+
+    return send_from_directory(
+        str(BASE_DIR / "frontend"),
         "index.html"
     )
 
+
+# =========================================================
+# FRONTEND FILES
+# =========================================================
 
 @app.route(
     "/frontend/<path:filename>"
@@ -574,26 +674,22 @@ def home():
 def frontend_files(filename):
 
     return send_from_directory(
-
-        BASE_DIR / "frontend",
-
+        str(BASE_DIR / "frontend"),
         filename
     )
 
-
-# --------------------------------------------------
+# =========================================================
 # START SERVER
-# --------------------------------------------------
+# =========================================================
 
 if __name__ == "__main__":
 
     create_database()
 
+    port = int(os.environ.get("PORT", 5000))
+
     app.run(
-
-        host="127.0.0.1",
-
-        port=5000,
-
-        debug=True
+        host="0.0.0.0",
+        port=port,
+        debug=False
     )
