@@ -682,12 +682,11 @@ def frontend_files(filename):
 # START SERVER
 # =========================================================
 
+# Create database when the app starts
+create_database()
+
 if __name__ == "__main__":
-
-    create_database()
-
     port = int(os.environ.get("PORT", 5000))
-
     app.run(
         host="0.0.0.0",
         port=port,
