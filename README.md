@@ -1,4 +1,7 @@
 # Digital Companion for Field Drug Testing
+## 🌐 Live Demo
+
+[🚀 Open the Live Website](https://digital-companion-field-drug-testing.onrender.com)
 
 A web-based prototype for digitally documenting and verifying field test records.
 
